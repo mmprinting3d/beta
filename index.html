@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MM 3D Printing – Tech Support CRM</title>
+
+  <!-- ===== Favicon (business logo) ===== -->
+  <link rel="icon" type="image/png"
+        href="https://raw.githubusercontent.com/mmprinting3d/MM-3D-Printing/main/images/logo.png" />
+
+  <!-- ===== html2pdf for PDF receipt export ===== -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    /* =========================================================
+       THEME TOKENS  (Light mode is the default)
+       ========================================================= */
+    :root {
+      --bg:            #f4f6fa;
+      --surface:       #ffffff;
+      --surface-2:     #f8fafc;
+      --border:        #e3e8ef;
+      --text:          #1a2233;
+      --text-muted:    #64748b;
+      --primary:       #1e5eff;
+      --primary-dark:  #1749c9;
+      --primary-soft:  #e8f0ff;
+      --success:       #16a34a;
+      --success-soft:  #e6f6ec;
+      --warning:       #d97706;
+      --warning-soft:  #fdf1e0;
+      --danger:        #dc2626;
+      --danger-soft:   #fdeaea;
+      --shadow:        0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
+      --shadow-lg:     0 10px 30px rgba(16,24,40,.12);
+      --radius:        14px;
+      --radius-sm:     9px;
+    }
+    html[data-theme="dark"] {
+      --bg:            #0e131c;
+      --surface:       #161c28;
+      --surface-2:     #1c2534;
+      --border:        #2a3546;
+      --text:          #e7edf6;
+      --text-muted:    #93a1b5;
+      --primary:       #4f83ff;
+      --primary-dark:  #3a6ae0;
+      --primary-soft:  #1b2740;
+      --success:       #22c55e;
+      --success-soft:  #14261a;
+      --warning:       #f59e0b;
+      --warning-soft:  #2a2010;
+      --danger:        #f26363;
+      --danger-soft:   #2c1717;
+      --shadow:        0 1px 3px rgba(0,0,0,.4);
+      --shadow-lg:     0 12px 34px rgba(0,0,0,.5);
+    }
+
+    /* =========================================================
+       BASE
+       ========================================================= */
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      transition: background .2s ease, color .2s ease;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+
+    /* =========================================================
+       APP LAYOUT
+       ========================================================= */
+    .app { display: flex; min-height: 100vh; }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      width: 250px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; bottom: 0; left: 0;
+      z-index: 40;
+      transition: transform .25s ease;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .brand img { width: 40px; height: 40px; object-fit: contain; border-radius: 8px; }
+    .brand .brand-txt strong { display: block; font-size: 15px; line-height: 1.2; }
+    .brand .brand-txt span { font-size: 11.5px; color: var(--text-muted); }
+    .nav { padding: 12px; flex: 1; overflow-y: auto; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: var(--radius-sm);
+      color: var(--text-muted); cursor: pointer;
+      font-weight: 500; margin-bottom: 3px;
+      transition: background .15s, color .15s;
+    }
+    .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .nav-item:hover { background: var(--surface-2); color: var(--text); }
+    .nav-item.active { background: var(--primary-soft); color: var(--primary); }
+    .sidebar-foot { padding: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+
+    /* ---- Main ---- */
+    .main { flex: 1; margin-left: 250px; display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      position: sticky; top: 0; z-index: 30;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 22px;
+    }
+    .topbar img.tb-logo { width: 30px; height: 30px; object-fit: contain; }
+    .menu-btn { display: none; background: none; border: none; cursor: pointer; color: var(--text); }
+    .search-wrap { position: relative; flex: 1; max-width: 460px; }
+    .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted); }
+    .search-wrap input {
+      width: 100%; padding: 10px 14px 10px 38px;
+      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface-2); color: var(--text); font-size: 14px;
+    }
+    .search-wrap input:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+    .search-results {
+      position: absolute; top: 46px; left: 0; right: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; box-shadow: var(--shadow-lg);
+      max-height: 340px; overflow-y: auto; display: none; z-index: 50;
+    }
+    .search-results .sr-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+    .search-results .sr-item:hover { background: var(--surface-2); }
+    .search-results .sr-item small { color: var(--text-muted); }
+    .topbar-spacer { flex: 1; }
+    .icon-btn {
+      background: var(--surface-2); border: 1px solid var(--border);
+      width: 40px; height: 40px; border-radius: 10px;
+      display: grid; place-items: center; cursor: pointer; color: var(--text);
+    }
+    .icon-btn:hover { background: var(--primary-soft); color: var(--primary); }
+
+    .content { padding: 26px; }
+    .page-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+    .page-head h1 { margin: 0; font-size: 23px; }
+    .page-head p { margin: 4px 0 0; color: var(--text-muted); font-size: 13.5px; }
+
+    /* =========================================================
+       CARDS / GRID
+       ========================================================= */
+    .grid { display: grid; gap: 18px; }
+    .stat-grid { grid-template-columns: repeat(4, 1fr); }
+    .two-col { grid-template-columns: repeat(2, 1fr); }
+    .three-col { grid-template-columns: repeat(3, 1fr); }
+    @media (max-width: 1100px){ .stat-grid, .three-col { grid-template-columns: repeat(2,1fr);} }
+    @media (max-width: 860px){ .two-col, .three-col { grid-template-columns: 1fr; } }
+    @media (max-width: 620px){ .stat-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px;
+    }
+    .card h3 { margin: 0 0 14px; font-size: 15px; }
+    .stat-card { display: flex; align-items: flex-start; gap: 14px; }
+    .stat-card .ic { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; }
+    .stat-card .ic svg { width: 22px; height: 22px; }
+    .stat-card .lbl { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
+    .stat-card .val { font-size: 25px; font-weight: 700; margin-top: 2px; }
+    .ic.blue{background:var(--primary-soft);color:var(--primary);}
+    .ic.green{background:var(--success-soft);color:var(--success);}
+    .ic.amber{background:var(--warning-soft);color:var(--warning);}
+    .ic.red{background:var(--danger-soft);color:var(--danger);}
+
+    /* =========================================================
+       BUTTONS
+       ========================================================= */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 16px; border-radius: 10px; border: 1px solid transparent;
+      font-size: 14px; font-weight: 600; cursor: pointer; user-select: none;
+      transition: transform .05s, background .15s; white-space: nowrap;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn svg { width: 18px; height: 18px; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-ghost { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--primary-soft); color: var(--primary); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { filter: brightness(.94); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-sm { padding: 7px 11px; font-size: 13px; border-radius: 8px; }
+    .btn-block { width: 100%; }
+
+    /* =========================================================
+       TABLES
+       ========================================================= */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 13px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { color: var(--text-muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em; }
+    tbody tr:hover { background: var(--surface-2); }
+    td.actions { display: flex; gap: 6px; }
+    .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .empty svg { width: 42px; height: 42px; opacity: .5; margin-bottom: 8px; }
+
+    /* ---- Badges ---- */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge.new{background:var(--primary-soft);color:var(--primary);}
+    .badge.scheduled{background:var(--warning-soft);color:var(--warning);}
+    .badge.progress{background:#e0f2fe;color:#0369a1;}
+    html[data-theme="dark"] .badge.progress{background:#0c2733;color:#38bdf8;}
+    .badge.completed{background:var(--success-soft);color:var(--success);}
+    .badge.cancelled{background:var(--danger-soft);color:var(--danger);}
+
+    /* =========================================================
+       FORMS
+       ========================================================= */
+    .field { margin-bottom: 15px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 9px; background: var(--surface-2); color: var(--text); font-size: 14px; font-family: inherit;
+    }
+    .field textarea { resize: vertical; min-height: 76px; }
+    .field input:focus, .field select:focus, .field textarea:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 560px){ .form-row { grid-template-columns: 1fr; } }
+
+    /* =========================================================
+       MODAL
+       ========================================================= */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(9,14,22,.55);
+      display: none; align-items: flex-start; justify-content: center;
+      padding: 40px 16px; z-index: 100; overflow-y: auto;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: var(--radius);
+      width: 100%; max-width: 620px; box-shadow: var(--shadow-lg);
+      animation: pop .18s ease;
+    }
+    .modal.lg { max-width: 860px; }
+    @keyframes pop { from { transform: translateY(14px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--border); }
+    .modal-head h2 { margin: 0; font-size: 18px; }
+    .modal-body { padding: 22px; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 22px; border-top: 1px solid var(--border); }
+    .x-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; }
+    .x-btn:hover { color: var(--text); }
+
+    /* =========================================================
+       TIMER / BILLING
+       ========================================================= */
+    .timer-display { font-size: 52px; font-weight: 800; letter-spacing: 2px; text-align: center; font-variant-numeric: tabular-nums; margin: 8px 0; }
+    .billing-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+    .billing-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+    .billing-box .bl { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+    .billing-box .bv { font-size: 22px; font-weight: 700; margin-top: 3px; }
+    .pulse { animation: pulse 1.4s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.55;} }
+
+    /* ---- Checklist ---- */
+    .checklist-section { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+    .cl-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; background: var(--surface-2); cursor: pointer; font-weight: 600; }
+    .cl-head .chev { transition: transform .2s; }
+    .cl-head.collapsed .chev { transform: rotate(-90deg); }
+    .cl-body { padding: 6px 16px 12px; }
+    .cl-body.collapsed { display: none; }
+    .cl-item { display: flex; align-items: center; gap: 11px; padding: 9px 4px; cursor: pointer; }
+    .cl-item input { width: 19px; height: 19px; accent-color: var(--primary); cursor: pointer; }
+    .cl-item span { transition: .15s; }
+    .cl-item.done span { text-decoration: line-through; color: var(--text-muted); }
+    .progress-track { height: 9px; border-radius: 20px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--border); }
+    .progress-fill { height: 100%; background: var(--primary); transition: width .3s; }
+
+    /* ---- Timeline ---- */
+    .timeline { position: relative; padding-left: 26px; }
+    .timeline::before { content:""; position:absolute; left:8px; top:4px; bottom:4px; width:2px; background:var(--border); }
+    .tl-item { position: relative; padding: 0 0 20px; }
+    .tl-item::before { content:""; position:absolute; left:-22px; top:4px; width:12px; height:12px; border-radius:50%; background:var(--primary); border:2px solid var(--surface); }
+    .tl-item .tl-date { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+    .tl-item .tl-title { font-weight: 600; margin: 2px 0; }
+    .tl-item .tl-meta { font-size: 13px; color: var(--text-muted); }
+
+    /* ---- Receipt ---- */
+    .receipt { background: #fff; color: #1a2233; border-radius: 10px; padding: 30px; max-width: 480px; margin: 0 auto; font-size: 14px; }
+    .receipt .rc-head { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 16px; }
+    .receipt .rc-head img { width: 60px; height: 60px; object-fit: contain; margin-bottom: 6px; }
+    .receipt .rc-head h2 { margin: 4px 0 2px; font-size: 18px; }
+    .receipt .rc-head small { color: #64748b; }
+    .receipt .rc-row { display: flex; justify-content: space-between; padding: 5px 0; }
+    .receipt .rc-row .k { color: #64748b; }
+    .receipt .rc-total { border-top: 2px dashed #cbd5e1; margin-top: 14px; padding-top: 14px; display: flex; justify-content: space-between; font-size: 20px; font-weight: 800; }
+    .receipt .rc-foot { text-align: center; margin-top: 18px; color: #64748b; font-size: 12.5px; }
+
+    /* ---- Toast ---- */
+    .toast-wrap { position: fixed; bottom: 22px; right: 22px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--primary);
+      border-radius: 10px; box-shadow: var(--shadow-lg); padding: 13px 16px; min-width: 240px; max-width: 340px;
+      display: flex; align-items: center; gap: 10px; animation: slidein .25s ease;
+    }
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--danger); }
+    .toast.warn { border-left-color: var(--warning); }
+    @keyframes slidein { from { transform: translateX(120%); } to { transform: none; } }
+
+    .hidden { display: none !important; }
+    .flex { display: flex; } .items-center { align-items: center; } .gap-2 { gap: 8px; } .gap-3 { gap: 12px; }
+    .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 14px; } .mb-2 { margin-bottom: 10px; }
+    .muted { color: var(--text-muted); } .center { text-align: center; }
+    .config-banner { background: var(--warning-soft); color: var(--warning); padding: 10px 26px; font-size: 13px; font-weight: 600; text-align: center; }
+
+    /* ---- Mobile ---- */
+    .backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 39; }
+    @media (max-width: 900px){
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: none; }
+      .main { margin-left: 0; }
+      .menu-btn { display: grid; place-items: center; }
+      .backdrop.show { display: block; }
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+<div id="loginScreen" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+  <div class="modal" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 400px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <h2 style="margin-bottom: 8px; color: var(--text);">CRM Login</h2>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Sign in with your Firebase account to access the CRM.</p>
+    
+    <div class="field" style="margin-bottom: 15px;">
+      <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text);">Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@mmprinting.com" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text);" />
+    </div>
+    
+    <div class="field" style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text);">Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text);" />
+    </div>
+    
+    <button id="loginBtn" style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Sign In</button>
+  </div>
+</div>
+    
+    <!-- =========================== SIDEBAR =========================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand" onclick="navigate('dashboard')">
+        <img src="https://raw.githubusercontent.com/mmprinting3d/MM-3D-Printing/main/images/logo.png" alt="MM 3D Printing logo" />
+        <div class="brand-txt">
+          <strong>MM 3D Printing</strong>
+          <span>Tech Support Services</span>
+        </div>
+      </div>
+      <nav class="nav" id="nav"><!-- nav items injected --></nav>
+      <div class="sidebar-foot">Internal CRM • v1.0</div>
+    </aside>
+    <div class="backdrop" id="backdrop" onclick="toggleSidebar(false)"></div>
+
+    <!-- =========================== MAIN =========================== -->
+    <div class="main">
+      <header class="topbar">
+        <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <img class="tb-logo" src="https://raw.githubusercontent.com/mmprinting3d/MM-3D-Printing/main/images/logo.png" alt="logo" />
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="globalSearch" placeholder="Search customers, phone, email, receipts…"
+                 autocomplete="off" oninput="doGlobalSearch(this.value)" onfocus="doGlobalSearch(this.value)" />
+          <div class="search-results" id="searchResults"></div>
+        </div>
+        <div class="topbar-spacer"></div>
+        <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>
+        </button>
+      </header>
+
+      <div class="config-banner hidden" id="configBanner">
+        Demo mode: Firebase is not configured, data is saved locally in this browser. Add your Firebase config in Settings → Firebase to sync to Firestore.
+      </div>
+
+      <main class="content" id="view"><!-- views injected --></main>
+    </div>
+  </div>
+
+  <!-- =========================== MODAL HOST =========================== -->
+  <div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalBox"></div></div>
+
+  <!-- =========================== TOASTS =========================== -->
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <!-- Hidden print host for receipts -->
+  <div id="printArea" class="hidden"></div>
+
+  <!-- =========================================================
+       APPLICATION LOGIC  (Vanilla JS + Firebase Modular SDK)
+       ========================================================= -->
+  <script type="module">
+    /* ---------------------------------------------------------
+       FIREBASE MODULAR SDK IMPORTS
+       --------------------------------------------------------- */
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, collection, doc, onSnapshot,
+      addDoc, updateDoc, deleteDoc, setDoc, getDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// --- ADD THESE AUTH IMPORTS ---
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      onAuthStateChanged, 
+      signOut 
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    
+    /* ---------------------------------------------------------
+       FIREBASE CONFIGURATION  (placeholders — fill these in)
+       Replace the placeholder strings with your real project
+       credentials. Once every value is filled, the app switches
+       automatically from local demo storage to Firestore.
+       --------------------------------------------------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyB7ecN_gc_IWy2heBXN-SRmJkynGQBeAEU",
+  authDomain: "mm-3d-printing-crm-1.firebaseapp.com",
+  projectId: "mm-3d-printing-crm-1",
+  storageBucket: "mm-3d-printing-crm-1.firebasestorage.app",
+  messagingSenderId: "409513512266",
+  appId: "1:409513512266:web:05528f272cf9a0fba6c5b3"
+};
+
+
+    // Detect whether the config still holds placeholder values.
+    const CONFIG_READY = !Object.values(firebaseConfig).some(v => String(v).startsWith("YOUR_"));
+
+let fdb = null;
+    let auth = null; // <--- Add this line
+
+    if (CONFIG_READY) {
+      try {
+        const app = initializeApp(firebaseConfig);
+        fdb = getFirestore(app);
+        auth = getAuth(app); // <--- Add this line
+      } catch (e) {
+        console.log("[v0] Firebase init failed, falling back to local:", e.message);
+      }
+    }
+
+    /* =========================================================
+       DATA LAYER
+       A thin abstraction that talks to Firestore when configured,
+       and otherwise mirrors the same API against localStorage so
+       the CRM is fully functional in demo mode.
+       Collections: customers, appointments, services, receipts, settings
+       ========================================================= */
+    const COLLECTIONS = ["customers", "appointments", "services", "receipts"];
+    const listeners = {}; // collectionName -> [callbacks]
+    const cache = {};      // collectionName -> array of docs
+
+    function notify(name){ (listeners[name]||[]).forEach(cb => cb(cache[name])); }
+    function subscribe(name, cb){ (listeners[name] = listeners[name] || []).push(cb); if (cache[name]) cb(cache[name]); }
+
+    // ---- Local (demo) storage helpers ----
+    const LS_KEY = n => "mmcrm_" + n;
+    function localLoad(name){ try { return JSON.parse(localStorage.getItem(LS_KEY(name))) || []; } catch { return []; } }
+    function localSave(name){ localStorage.setItem(LS_KEY(name), JSON.stringify(cache[name])); }
+    function uid(){ return "id_" + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+    // ---- Public data API ----
+    async function dbAdd(name, data){
+      data = { ...data, dateAdded: data.dateAdded || new Date().toISOString() };
+      if (fdb){ const ref = await addDoc(collection(fdb, name), data); return ref.id; }
+      const id = uid(); cache[name].push({ id, ...data }); localSave(name); notify(name); return id;
+    }
+    async function dbUpdate(name, id, data){
+      if (fdb){ await updateDoc(doc(fdb, name, id), data); return; }
+      const i = cache[name].findIndex(x => x.id === id);
+      if (i > -1){ cache[name][i] = { ...cache[name][i], ...data }; localSave(name); notify(name); }
+    }
+    async function dbDelete(name, id){
+      if (fdb){ await deleteDoc(doc(fdb, name, id)); return; }
+      cache[name] = cache[name].filter(x => x.id !== id); localSave(name); notify(name);
+    }
+    function getAll(name){ return cache[name] || []; }
+    function getOne(name, id){ return (cache[name]||[]).find(x => x.id === id); }
+
+    // ---- Settings document (single doc) ----
+    const DEFAULT_SETTINGS = {
+      businessName: "MM 3D Printing – Tech Support Services",
+      businessPhone: "0586780680",
+      businessEmail: "mm3dprinting613@gmail.com",
+      businessAddress: "",
+      logoUrl: "https://raw.githubusercontent.com/mmprinting3d/MM-3D-Printing/main/images/logo.png",
+      currency: "₪",
+      pricePer30: 50,
+      blockLength: 15,
+      pricePerBlock: 25,
+      receiptFooter: "MM 3D Printing – Tech Support Services is an independently operated local service and is not currently registered with the Israel Tax Authority (רשות המסים). This document is a service receipt/payment confirmation and is not an official tax invoice (חשבונית מס)."
+    };
+    let settings = { ...DEFAULT_SETTINGS };
+
+    async function loadSettings(){
+      if (fdb){
+        const snap = await getDoc(doc(fdb, "settings", "main"));
+        settings = snap.exists() ? { ...DEFAULT_SETTINGS, ...snap.data() } : { ...DEFAULT_SETTINGS };
+      } else {
+        try { settings = { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem(LS_KEY("settings"))) || {}) }; }
+        catch { settings = { ...DEFAULT_SETTINGS }; }
+      }
+    }
+    async function saveSettings(next){
+      settings = { ...settings, ...next };
+      if (fdb){ await setDoc(doc(fdb, "settings", "main"), settings, { merge: true }); }
+      else { localStorage.setItem(LS_KEY("settings"), JSON.stringify(settings)); }
+    }
+
+    /* ---------------------------------------------------------
+       INITIALISE DATA STREAMS
+       --------------------------------------------------------- */
+    async function initData(){
+      await loadSettings();
+      if (fdb){
+        COLLECTIONS.forEach(name => {
+          onSnapshot(collection(fdb, name), snap => {
+            cache[name] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            notify(name);
+            reRenderCurrent();
+          });
+        });
+      } else {
+        COLLECTIONS.forEach(name => { cache[name] = localLoad(name); });
+        document.getElementById("configBanner").classList.remove("hidden");
+      }
+    }
+
+    /* =========================================================
+       BILLING ENGINE
+       Rate: ₪50 / 30 min  →  15-minute blocks @ ₪25 each.
+       billableBlocks = ceil(workedMinutes / blockLength)
+       totalCharge   = billableBlocks × pricePerBlock
+       ========================================================= */
+    function billing(workedMs){
+      const workedMinutes = workedMs / 60000;
+      const blockLen = settings.blockLength || 3;
+      const perBlock = settings.pricePerBlock || 5;
+      const blocks = Math.max(1, Math.ceil(workedMinutes / blockLen));
+      return {
+        workedMinutes,
+        workedMs,
+        blocks,
+        perBlock,
+        blockLen,
+        roundedMinutes: blocks * blockLen,
+        total: blocks * perBlock
+      };
+    }
+    function money(n){ return settings.currency + Number(n || 0).toLocaleString(); }
+    function fmtDuration(ms){
+      const s = Math.floor(ms/1000);
+      const h = String(Math.floor(s/3600)).padStart(2,"0");
+      const m = String(Math.floor((s%3600)/60)).padStart(2,"0");
+      const ss = String(s%60).padStart(2,"0");
+      return `${h}:${m}:${ss}`;
+    }
+    function fmtDate(iso){ if(!iso) return "—"; const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleDateString(); }
+    function fmtDateTime(iso){ if(!iso) return "—"; const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleString(); }
+    function fmtTime(iso){ if(!iso) return "—"; const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); }
+
+    /* =========================================================
+       SERVICE TYPES & PAYMENT METHODS
+       ========================================================= */
+    const SERVICE_TYPES = [
+      "Phone Setup","Phone Data Transfer","Printer Setup","Email Setup",
+      "Antivirus Recommendation and Setup","Ad Block Installation",
+      "Internet / Device Filtering Recommendation and Installation",
+      "Device Recommendation","General Tech Support","Other"
+    ];
+    const PAYMENT_METHODS = ["Cash","Bit","Bank Transfer"];
+    const APPT_STATUSES = ["New","Scheduled","In Progress","Completed","Cancelled"];
+
+    const CHECKLIST_TEMPLATE = {
+      "Before Appointment": ["Customer Form Received","Appointment Confirmed","Problem Understood","Estimated Time Given"],
+      "During Service": ["Customer Approved Work","Device Inspected","Service Completed","Device Tested","Customer Shown Result"],
+      "After Service": ["Service Notes Added","Receipt Generated","Payment Received","Follow-Up Explained","Job Marked Complete"]
+    };
+
+    /* =========================================================
+       ICONS (inline SVG helpers)
+       ========================================================= */
+    const I = {
+      dash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>',
+      users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+      wrench:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.6 5.3L3 18l3 3 6.4-6.1a4 4 0 0 0 5.3-5.6l-2.5 2.5-2.1-.4-.4-2.1z"/></svg>',
+      receipt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1V2l-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/></svg>',
+      chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+      gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+      backup:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+      money:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+      check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+      clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+      edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>',
+      trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+      eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+      print:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+      download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+      moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+    };
+
+    /* =========================================================
+       NAVIGATION
+       ========================================================= */
+    const NAV = [
+      { id:"dashboard",    label:"Dashboard",    icon:I.dash },
+      { id:"customers",    label:"Customers",    icon:I.users },
+      { id:"appointments", label:"Appointments", icon:I.calendar },
+      { id:"services",     label:"Service History", icon:I.wrench },
+      { id:"receipts",     label:"Receipts",     icon:I.receipt },
+      { id:"reports",      label:"Reports",      icon:I.chart },
+      { id:"settings",     label:"Settings",     icon:I.gear },
+      { id:"backup",       label:"Backup",       icon:I.backup }
+    ];
+    let currentPage = "dashboard";
+    let currentParam = null;
+
+    function renderNav(){
+      document.getElementById("nav").innerHTML = NAV.map(n => `
+        <div class="nav-item ${n.id===currentPage?'active':''}" onclick="navigate('${n.id}')">
+          ${n.icon}<span>${n.label}</span>
+        </div>`).join("");
+    }
+
+    window.navigate = function(page, param){
+      currentPage = page; currentParam = param || null;
+      renderNav();
+      if (window.innerWidth <= 900) toggleSidebar(false);
+      reRenderCurrent();
+      document.getElementById("view").scrollTo?.(0,0);
+      window.scrollTo(0,0);
+    };
+    function reRenderCurrent(){ RENDERERS[currentPage]?.(); }
+
+    window.toggleSidebar = function(force){
+      const sb = document.getElementById("sidebar");
+      const bd = document.getElementById("backdrop");
+      const open = force === undefined ? !sb.classList.contains("open") : force;
+      sb.classList.toggle("open", open);
+      bd.classList.toggle("show", open);
+    };
+
+    /* =========================================================
+       THEME
+       ========================================================= */
+    function applyTheme(t){
+      document.documentElement.setAttribute("data-theme", t);
+      document.getElementById("themeIcon").outerHTML =
+        (t === "dark" ? I.moon : I.dash.replace(I.dash, `<svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>`));
+      // set proper icon id after replace
+      const btn = document.getElementById("themeBtn");
+      btn.innerHTML = t === "dark"
+        ? '<svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+        : '<svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>';
+    }
+    window.toggleTheme = function(){
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      localStorage.setItem("mmcrm_theme", next);
+      applyTheme(next);
+    };
+
+    /* =========================================================
+       TOASTS + CONFIRM DIALOG
+       ========================================================= */
+    window.toast = function(msg, type="success"){
+      const el = document.createElement("div");
+      el.className = "toast " + type;
+      el.innerHTML = `<span>${msg}</span>`;
+      document.getElementById("toastWrap").appendChild(el);
+      setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .3s"; setTimeout(()=>el.remove(), 300); }, 2800);
+    };
+
+    function confirmDialog(message, onYes, danger=true){
+      openModal(`
+        <div class="modal-head"><h2>Please confirm</h2>
+          <button class="x-btn" onclick="closeModal()">${xIcon()}</button></div>
+        <div class="modal-body"><p style="margin:0">${message}</p></div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn ${danger?'btn-danger':'btn-primary'}" id="confirmYes">Confirm</button>
+        </div>`);
+      document.getElementById("confirmYes").onclick = () => { closeModal(); onYes(); };
+    }
+    function xIcon(){ return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'; }
+
+    /* =========================================================
+       MODAL HELPERS
+       ========================================================= */
+    function openModal(html, large=false){
+      const box = document.getElementById("modalBox");
+      box.className = "modal" + (large ? " lg" : "");
+      box.innerHTML = html;
+      document.getElementById("modalOverlay").classList.add("open");
+    }
+    window.closeModal = function(){ document.getElementById("modalOverlay").classList.remove("open"); };
+    document.getElementById("modalOverlay").addEventListener("click", e => { if (e.target.id === "modalOverlay") closeModal(); });
+
+    /* =========================================================
+       INCOME / STATS HELPERS
+       ========================================================= */
+    function startOfToday(){ const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+    function startOfWeek(){ const d = new Date(); const day = (d.getDay()+6)%7; d.setDate(d.getDate()-day); d.setHours(0,0,0,0); return d.getTime(); }
+    function startOfMonth(){ const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.getTime(); }
+
+    function incomeSince(ts){
+      return getAll("services")
+        .filter(s => s.dateISO && new Date(s.dateISO).getTime() >= ts)
+        .reduce((sum, s) => sum + Number(s.amount || 0), 0);
+    }
+    function totalIncome(){ return getAll("services").reduce((s,x)=>s+Number(x.amount||0),0); }
+
+    /* =========================================================
+       PAGE RENDERERS
+       ========================================================= */
+    const RENDERERS = {};
+    function setView(html){ document.getElementById("view").innerHTML = html; }
+    function pageHead(title, subtitle, actions=""){
+      return `<div class="page-head"><div><h1>${title}</h1><p>${subtitle}</p></div><div class="flex gap-2">${actions}</div></div>`;
+    }
+    function emptyState(icon, text){ return `<div class="empty">${icon}<div>${text}</div></div>`; }
+    function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    /* ---------- DASHBOARD ---------- */
+    RENDERERS.dashboard = function(){
+      const customers = getAll("customers");
+      const appts = getAll("appointments");
+      const services = getAll("services");
+      const today = startOfToday();
+
+      const activeAppts = appts.filter(a => ["New","Scheduled","In Progress"].includes(a.status)).length;
+      const completedJobs = services.length;
+      const todaysJobs = services.filter(s => s.dateISO && new Date(s.dateISO).getTime() >= today).length
+        + appts.filter(a => a.date === new Date().toISOString().slice(0,10)).length;
+
+      const recentCustomers = [...customers].sort((a,b)=> new Date(b.dateAdded)-new Date(a.dateAdded)).slice(0,5);
+      const recentJobs = [...services].sort((a,b)=> new Date(b.dateISO)-new Date(a.dateISO)).slice(0,5);
+      const upcoming = appts.filter(a => ["New","Scheduled"].includes(a.status))
+        .sort((a,b)=> new Date(a.date+"T"+(a.time||"00:00")) - new Date(b.date+"T"+(b.time||"00:00"))).slice(0,5);
+
+      setView(`
+        ${pageHead("Dashboard", settings.businessName)}
+        <div class="card flex items-center gap-3" style="margin-bottom:18px;">
+          <img src="${esc(settings.logoUrl)}" alt="logo" style="width:56px;height:56px;object-fit:contain;border-radius:10px;">
+          <div><div style="font-size:18px;font-weight:700;">${esc(settings.businessName)}</div>
+          <div class="muted">Welcome back — here is your business at a glance.</div></div>
+        </div>
+
+        <div class="grid stat-grid">
+          ${statCard(I.users,"blue","Total Customers",customers.length)}
+          ${statCard(I.calendar,"amber","Active Appointments",activeAppts)}
+          ${statCard(I.check,"green","Completed Jobs",completedJobs)}
+          ${statCard(I.clock,"blue","Today's Jobs",todaysJobs)}
+        </div>
+
+        <div class="grid stat-grid" style="margin-top:18px;">
+          ${statCard(I.money,"green","Total Income",money(totalIncome()))}
+          ${statCard(I.money,"blue","Today's Income",money(incomeSince(startOfToday())))}
+          ${statCard(I.money,"amber","Weekly Income",money(incomeSince(startOfWeek())))}
+          ${statCard(I.money,"green","Monthly Income",money(incomeSince(startOfMonth())))}
+        </div>
+
+        <div class="grid three-col" style="margin-top:22px;">
+          <div class="card">
+            <h3>Recent Customers</h3>
+            ${recentCustomers.length ? recentCustomers.map(c => `
+              <div class="flex items-center gap-2" style="padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewCustomer('${c.id}')">
+                <div style="width:34px;height:34px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-weight:700">${esc((c.name||"?").charAt(0).toUpperCase())}</div>
+                <div><div style="font-weight:600">${esc(c.name)}</div><small class="muted">${esc(c.phone||"")}</small></div>
+              </div>`).join("") : emptyState(I.users,"No customers yet")}
+          </div>
+          <div class="card">
+            <h3>Recent Jobs</h3>
+            ${recentJobs.length ? recentJobs.map(s => `
+              <div style="padding:9px 0;border-bottom:1px solid var(--border)">
+                <div style="font-weight:600">${esc(s.serviceType)}</div>
+                <small class="muted">${esc(s.customerName)} • ${fmtDate(s.dateISO)} • ${money(s.amount)}</small>
+              </div>`).join("") : emptyState(I.wrench,"No jobs yet")}
+          </div>
+          <div class="card">
+            <h3>Upcoming Appointments</h3>
+            ${upcoming.length ? upcoming.map(a => `
+              <div style="padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewAppointment('${a.id}')">
+                <div style="font-weight:600">${esc(a.customerName)}</div>
+                <small class="muted">${fmtDate(a.date)} ${esc(a.time||"")} ${statusBadge(a.status)}</small>
+              </div>`).join("") : emptyState(I.calendar,"No upcoming appointments")}
+          </div>
+        </div>
+      `);
+    };
+    function statCard(icon,color,label,val){
+      return `<div class="card stat-card"><div class="ic ${color}">${icon}</div>
+        <div><div class="lbl">${label}</div><div class="val">${val}</div></div></div>`;
+    }
+    function statusBadge(s){
+      const map = {"New":"new","Scheduled":"scheduled","In Progress":"progress","Completed":"completed","Cancelled":"cancelled"};
+      return `<span class="badge ${map[s]||'new'}">${esc(s||'New')}</span>`;
+    }
+
+    /* ---------- CUSTOMERS ---------- */
+    let customerSearch = "";
+    RENDERERS.customers = function(){
+      let list = [...getAll("customers")].sort((a,b)=> new Date(b.dateAdded)-new Date(a.dateAdded));
+      if (customerSearch){
+        const q = customerSearch.toLowerCase();
+        list = list.filter(c => [c.name,c.phone,c.email,c.address].some(v => (v||"").toLowerCase().includes(q)));
+      }
+      setView(`
+        ${pageHead("Customers", `${getAll("customers").length} total`,
+          `<button class="btn btn-primary" onclick="customerForm()">${I.plus}Add Customer</button>`)}
+        <div class="card" style="margin-bottom:16px;padding:14px;">
+          <div class="search-wrap" style="max-width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Search customers by name, phone, email or address…" value="${esc(customerSearch)}"
+              oninput="setCustomerSearch(this.value)">
+          </div>
+        </div>
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Devices</th><th>Added</th><th>Actions</th></tr></thead>
+            <tbody>
+            ${list.length ? list.map(c => `
+              <tr>
+                <td style="font-weight:600;cursor:pointer" onclick="viewCustomer('${c.id}')">${esc(c.name)}</td>
+                <td>${esc(c.phone||"—")}</td>
+                <td>${esc(c.email||"—")}</td>
+                <td>${esc(c.devices||"—")}</td>
+                <td>${fmtDate(c.dateAdded)}</td>
+                <td class="actions">
+                  <button class="btn btn-ghost btn-sm" onclick="viewCustomer('${c.id}')" title="View">${I.eye}</button>
+                  <button class="btn btn-ghost btn-sm" onclick="customerForm('${c.id}')" title="Edit">${I.edit}</button>
+                  <button class="btn btn-ghost btn-sm" onclick="deleteCustomer('${c.id}')" title="Delete">${I.trash}</button>
+                </td>
+              </tr>`).join("")
+              : `<tr><td colspan="6">${emptyState(I.users, customerSearch?"No customers match your search":"No customers yet — add your first one")}</td></tr>`}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      `);
+    };
+    window.setCustomerSearch = function(v){ customerSearch = v; RENDERERS.customers(); };
+
+    window.customerForm = function(id){
+      const c = id ? getOne("customers", id) : {};
+      openModal(`
+        <div class="modal-head"><h2>${id?"Edit":"Add"} Customer</h2><button class="x-btn" onclick="closeModal()">${xIcon()}</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Full Name *</label><input id="c_name" value="${esc(c.name||"")}"></div>
+          <div class="form-row">
+            <div class="field"><label>Phone Number</label><input id="c_phone" value="${esc(c.phone||"")}"></div>
+            <div class="field"><label>Email</label><input id="c_email" value="${esc(c.email||"")}"></div>
+          </div>
+          <div class="field"><label>Address</label><input id="c_address" value="${esc(c.address||"")}"></div>
+          <div class="field"><label>Devices</label><input id="c_devices" placeholder="e.g. iPhone 13, HP Printer" value="${esc(c.devices||"")}"></div>
+          <div class="field"><label>Notes</label><textarea id="c_notes">${esc(c.notes||"")}</textarea></div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveCustomer('${id||""}')">Save Customer</button>
+        </div>`);
+    };
+    window.saveCustomer = async function(id){
+      const name = document.getElementById("c_name").value.trim();
+      if (!name){ toast("Customer name is required","error"); return; }
+      const data = {
+        name, phone: document.getElementById("c_phone").value.trim(),
+        email: document.getElementById("c_email").value.trim(),
+        address: document.getElementById("c_address").value.trim(),
+        devices: document.getElementById("c_devices").value.trim(),
+        notes: document.getElementById("c_notes").value.trim()
+      };
+      if (id){ await dbUpdate("customers", id, data); toast("Customer updated"); }
+      else { await dbAdd("customers", data); toast("Customer added"); }
+      closeModal(); RENDERERS.customers();
+    };
+    window.deleteCustomer = function(id){
+      const c = getOne("customers", id);
+      confirmDialog(`Delete customer <b>${esc(c?.name||"")}</b>? This cannot be undone.`, async () => {
+        await dbDelete("customers", id); toast("Customer deleted","warn"); reRenderCurrent();
+      });
+    };
+
+    window.viewCustomer = function(id){ navigate("customers"); openCustomerDetail(id); };
+    function openCustomerDetail(id){
+      const c = getOne("customers", id); if (!c) return;
+      const history = getAll("services").filter(s => s.customerId === id)
+        .sort((a,b)=> new Date(b.dateISO)-new Date(a.dateISO));
+      openModal(`
+        <div class="modal-head"><h2>${esc(c.name)}</h2><button class="x-btn" onclick="closeModal()">${xIcon()}</button></div>
+        <div class="modal-body">
+          <div class="grid two-col" style="gap:10px;margin-bottom:16px;">
+            <div><small class="muted">Phone</small><div>${esc(c.phone||"—")}</div></div>
+            <div><small class="muted">Email</small><div>${esc(c.email||"—")}</div></div>
+            <div><small class="muted">Address</small><div>${esc(c.address||"—")}</div></div>
+            <div><small class="muted">Devices</small><div>${esc(c.devices||"—")}</div></div>
+            <div><small class="muted">Date Added</small><div>${fmtDate(c.dateAdded)}</div></div>
+            <div><small class="muted">Total Spent</small><div style="font-weight:700">${money(history.reduce((s,x)=>s+Number(x.amount||0),0))}</div></div>
+          </div>
+          ${c.notes ? `<div class="card" style="background:var(--surface-2);margin-bottom:16px"><small class="muted">Notes</small><div>${esc(c.notes)}</div></div>`:""}
+          <h3 style="margin:6px 0 12px">Service Timeline</h3>
+          ${history.length ? `<div class="timeline">${history.map(s => `
+            <div class="tl-item">
+              <div class="tl-date">${fmtDate(s.dateISO)}</div>
+              <div class="tl-title">${esc(s.serviceType)} — ${money(s.amount)}</div>
+              <div class="tl-meta">${esc(s.description||"")}</div>
+              <div class="tl-meta">Time: ${s.roundedMinutes||0} min • ${s.blocks||0} block(s) • Receipt #${esc(s.receiptNo||"—")} • ${esc(s.paymentMethod||"—")}</div>
+            </div>`).join("")}</div>` : emptyState(I.wrench,"No service history yet")}
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+          <button class="btn btn-primary" onclick="closeModal();appointmentForm(null,'${id}')">${I.plus}New Appointment</button>
+        </div>`, true);
+    }
+
+    /* ---------- APPOINTMENTS ---------- */
+    RENDERERS.appointments = function(){
+      const list = [...getAll("appointments")].sort((a,b)=>
+        new Date((b.date||"")+"T"+(b.time||"00:00")) - new Date((a.date||"")+"T"+(a.time||"00:00")));
+      setView(`
+        ${pageHead("Appointments", `${list.length} total`,
+          `<button class="btn btn-primary" onclick="appointmentForm()">${I.plus}New Appointment</button>`)}
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Date</th><th>Time</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+            ${list.length ? list.map(a => `
+              <tr>
+                <td style="font-weight:600;cursor:pointer" onclick="viewAppointment('${a.id}')">${esc(a.customerName)}</td>
+                <td>${fmtDate(a.date)}</td>
+                <td>${esc(a.time||"—")}</td>
+                <td>${esc(a.address||"—")}</td>
+                <td>${statusBadge(a.status)}</td>
+                <td class="actions">
+                  <button class="btn btn-ghost btn-sm" onclick="viewAppointment('${a.id}')" title="Open">${I.eye}</button>
+                  <button class="btn btn-ghost btn-sm" onclick="appointmentForm('${a.id}')" title="Edit">${I.edit}</button>
+                  <button class="btn btn-ghost btn-sm" onclick="deleteAppointment('${a.id}')" title="Delete">${I.trash}</button>
+                </td>
+              </tr>`).join("")
+              : `<tr><td colspan="6">${emptyState(I.calendar,"No appointments yet")}</td></tr>`}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      `);
+    };
+
+    window.appointmentForm = function(id, presetCustomer){
+      const a = id ? getOne("appointments", id) : {};
+      const customers = getAll("customers");
+      const custId = a.customerId || presetCustomer || "";
+      openModal(`
+        <div class="modal-head"><h2>${id?"Edit":"New"} Appointment</h2><button class="x-btn" onclick="closeModal()">${xIcon()}</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Customer *</label>
+            <select id="a_customer" onchange="onApptCustomerChange()">
+              <option value="">— Select customer —</option>
+              ${customers.map(c => `<option value="${c.id}" ${c.id===custId?"selected":""}>${esc(c.name)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Date *</label><input type="date" id="a_date" value="${esc(a.date||new Date().toISOString().slice(0,10))}"></div>
+            <div class="field"><label>Time</label><input type="time" id="a_time" value="${esc(a.time||"")}"></div>
+          </div>
+          <div class="field"><label>Address</label><input id="a_address" value="${esc(a.address||"")}"></div>
+          <div class="field"><label>Status</label>
+            <select id="a_status">${APPT_STATUSES.map(s => `<option ${((a.status||"New")===s)?"selected":""}>${s}</option>`).join("")}</select>
+          </div>
+          <div class="field"><label>Notes</label><textarea id="a_notes">${esc(a.notes||"")}</textarea></div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveAppointment('${id||""}')">Save Appointment</button>
+        </div>`);
+    };
+    window.onApptCustomerChange = function(){
+      const sel = document.getElementById("a_customer");
+      const c = getOne("customers", sel.value);
+      if (c && !document.getElementById("a_address").value) document.getElementById("a_address").value = c.address || "";
+    };
+    window.saveAppointment = async function(id){
+      const custId = document.getElementById("a_customer").value;
+      if (!custId){ toast("Please select a customer","error"); return; }
+      const c = getOne("customers", custId);
+      const data = {
+        customerId: custId, customerName: c?.name || "",
+        date: document.getElementById("a_date").value,
+        time: document.getElementById("a_time").value,
+        address: document.getElementById("a_address").value.trim(),
+        status: document.getElementById("a_status").value,
+        notes: document.getElementById("a_notes").value.trim()
+      };
+      if (id){ await dbUpdate("appointments", id, data); toast("Appointment updated"); }
+      else { data.checklist = {}; await dbAdd("appointments", data); toast("Appointment created"); }
+      closeModal(); RENDERERS.appointments();
+    };
+    window.deleteAppointment = function(id){
+      confirmDialog("Delete this appointment? This cannot be undone.", async () => {
+        await dbDelete("appointments", id); toast("Appointment deleted","warn"); reRenderCurrent();
+      });
+    };
+
+    /* ---------- APPOINTMENT DETAIL (checklist + timer + billing) ---------- */
+    let timerInterval = null;
+    window.viewAppointment = function(id){ navigate("appointments"); openAppointmentDetail(id); };
+
+    function openAppointmentDetail(id){
+      renderAppointmentDetail(id);
+    }
+    function renderAppointmentDetail(id){
+      const a = getOne("appointments", id); if (!a) return;
+      const checklist = a.checklist || {};
+      let totalItems = 0, doneItems = 0;
+      Object.values(CHECKLIST_TEMPLATE).forEach(items => items.forEach(it => { totalItems++; if (checklist[it]) doneItems++; }));
+      const pct = totalItems ? Math.round(doneItems/totalItems*100) : 0;
+
+      const running = !!a.timerStart && !a.timerEnd;
+
+      openModal(`
+        <div class="modal-head"><h2>${esc(a.customerName)} — Appointment</h2><button class="x-btn" onclick="stopTimerTick();closeModal()">${xIcon()}</button></div>
+        <div class="modal-body">
+          <div class="flex items-center gap-2 mb-2" style="flex-wrap:wrap;justify-content:space-between">
+            <div>${statusBadge(a.status)} <span class="muted">${fmtDate(a.date)} ${esc(a.time||"")}</span></div>
+            <button class="btn btn-ghost btn-sm" onclick="closeModal();appointmentForm('${id}')">${I.edit}Edit details</button>
+          </div>
+          ${a.address ? `<div class="muted mb-2">📍 ${esc(a.address)}</div>`:""}
+          ${a.notes ? `<div class="card" style="background:var(--surface-2);margin-bottom:14px">${esc(a.notes)}</div>`:""}
+
+          <!-- ===== VISIT TIMER + LIVE BILLING ===== -->
+          <div class="card" style="text-align:center;margin-bottom:16px">
+            <h3 style="justify-content:center">Visit Timer</h3>
+            <div class="timer-display ${running?'pulse':''}" id="timerDisplay">${running ? fmtDuration(Date.now()-a.timerStart) : (a.timerEnd?fmtDuration(a.workedMs||0):"00:00:00")}</div>
+            ${running ? `
+              <div class="billing-grid" style="margin:14px 0">
+                <div class="billing-box"><div class="bl">Current Charge</div><div class="bv" id="curCharge">—</div></div>
+                <div class="billing-box"><div class="bl">Next Increase In</div><div class="bv" id="nextIn">—</div></div>
+              </div>
+              <div class="billing-grid" style="margin-bottom:14px">
+                <div class="billing-box"><div class="bl">Billing Blocks</div><div class="bv" id="curBlocks">—</div></div>
+                <div class="billing-box"><div class="bl">Next Charge</div><div class="bv" id="nextCharge">—</div></div>
+              </div>
+              <button class="btn btn-danger btn-block" onclick="endVisit('${id}')">🔴 END VISIT</button>
+            ` : (a.timerEnd ? `
+              <div class="muted" style="margin:8px 0">Visit completed — Base charge ${money(a.total||0)}</div>
+              <button class="btn btn-ghost btn-block" onclick="startVisit('${id}', true)">Start a new visit</button>
+            ` : `
+              <button class="btn btn-success btn-block" onclick="startVisit('${id}')">🟢 START VISIT</button>
+            `)}
+          </div>
+
+          <!-- ===== JOB CHECKLIST ===== -->
+          <div class="flex items-center" style="justify-content:space-between;margin-bottom:8px">
+            <h3 style="margin:0">Job Checklist</h3><span class="muted" id="clPct">${pct}% complete</span>
+          </div>
+          <div class="progress-track mb-2"><div class="progress-fill" id="clBar" style="width:${pct}%"></div></div>
+          ${Object.entries(CHECKLIST_TEMPLATE).map(([section, items], si) => `
+            <div class="checklist-section">
+              <div class="cl-head" onclick="toggleClSection(${si})">
+                <span>${section}</span>
+                <span class="chev">${chevIcon()}</span>
+              </div>
+              <div class="cl-body" data-cl="${si}">
+                ${items.map(it => `
+                  <label class="cl-item ${checklist[it]?'done':''}">
+                    <input type="checkbox" ${checklist[it]?"checked":""} onchange="toggleChecklist('${id}','${esc(it).replace(/'/g,"\\'")}',this.checked)">
+                    <span>${esc(it)}</span>
+                  </label>`).join("")}
+              </div>
+            </div>`).join("")}
+        </div>
+        <div class="modal-foot">
+          <select id="appt_status_quick" class="btn btn-ghost" style="cursor:pointer" onchange="quickStatus('${id}',this.value)">
+            ${APPT_STATUSES.map(s => `<option ${a.status===s?"selected":""}>${s}</option>`).join("")}
+          </select>
+          <button class="btn btn-ghost" onclick="stopTimerTick();closeModal()">Close</button>
+        </div>`, true);
+
+      if (running) startTimerTick(id);
+    }
+    function chevIcon(){ return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>'; }
+
+    window.toggleClSection = function(si){
+      const body = document.querySelector(`[data-cl="${si}"]`);
+      const head = body.previousElementSibling;
+      body.classList.toggle("collapsed"); head.classList.toggle("collapsed");
+    };
+
+    window.toggleChecklist = async function(id, item, checked){
+      const a = getOne("appointments", id); if (!a) return;
+      const checklist = { ...(a.checklist||{}) };
+      checklist[item] = checked;
+      await dbUpdate("appointments", id, { checklist }); // saved immediately to Firestore/local
+      // update progress UI without full re-render
+      let total=0, done=0;
+      Object.values(CHECKLIST_TEMPLATE).forEach(items => items.forEach(it => { total++; if (checklist[it]) done++; }));
+      const pct = total ? Math.round(done/total*100) : 0;
+      const bar = document.getElementById("clBar"), lbl = document.getElementById("clPct");
+      if (bar) bar.style.width = pct + "%";
+      if (lbl) lbl.textContent = pct + "% complete";
+      // visual done state
+      const cb = event.target; cb.closest(".cl-item").classList.toggle("done", checked);
+    };
+
+    window.quickStatus = async function(id, status){
+      await dbUpdate("appointments", id, { status }); toast("Status: " + status);
+    };
+
+    /* ---- VISIT TIMER ---- */
+    window.startVisit = async function(id, restart){
+      const now = Date.now();
+      await dbUpdate("appointments", id, {
+        timerStart: now, timerEnd: null, workedMs: null, total: null, status: "In Progress",
+        arrivalISO: new Date(now).toISOString()
+      });
+      toast("Visit started — timer running");
+      renderAppointmentDetail(id);
+    };
+
+    function startTimerTick(id){
+      stopTimerTick();
+      timerInterval = setInterval(() => {
+        const a = getOne("appointments", id);
+        if (!a || !a.timerStart || a.timerEnd){ stopTimerTick(); return; }
+        const elapsed = Date.now() - a.timerStart;
+        const disp = document.getElementById("timerDisplay");
+        if (!disp){ stopTimerTick(); return; }
+        disp.textContent = fmtDuration(elapsed);
+        const b = billing(elapsed);
+        const set = (id2,val) => { const el = document.getElementById(id2); if (el) el.textContent = val; };
+        set("curCharge", money(b.total));
+        set("curBlocks", b.blocks);
+        set("nextCharge", money(b.total + b.perBlock));
+        // time until the next billing block starts
+        const msIntoBlock = elapsed % (b.blockLen*60000);
+        const msLeft = (b.blockLen*60000) - msIntoBlock;
+        set("nextIn", fmtDuration(msLeft).slice(3)); // MM:SS
+      }, 1000);
+    }
+    window.stopTimerTick = function(){ if (timerInterval){ clearInterval(timerInterval); timerInterval = null; } };
+
+    window.endVisit = async function(id){
+      const a = getOne("appointments", id); if (!a || !a.timerStart) return;
+      stopTimerTick();
+      const end = Date.now();
+      const workedMs = end - a.timerStart;
+      const b = billing(workedMs);
+      const receiptNo = nextReceiptNo();
+      const departureISO = new Date(end).toISOString();
+
+      // 1) Persist timer close-out on the appointment
+      await dbUpdate("appointments", id, {
+        timerEnd: end, workedMs, total: b.total, status: "Completed", departureISO
+      });
+
+      // 2) Create the service record (customer history)
+      const serviceData = {
+        customerId: a.customerId, customerName: a.customerName,
+        dateISO: departureISO,
+        serviceType: a.lastServiceType || "General Tech Support",
+        description: a.notes || "",
+        deviceInfo: (getOne("customers", a.customerId)||{}).devices || "",
+        arrivalISO: a.arrivalISO, departureISO,
+        workedMs, roundedMinutes: b.roundedMinutes, blocks: b.blocks,
+        perBlock: b.perBlock, amount: b.total, // initially just base amount
+        paymentMethod: "Cash", receiptNo, notes: a.notes || ""
+      };
+      const serviceId = await dbAdd("services", serviceData);
+
+      toast("Visit ended — service saved");
+      stopTimerTick(); closeModal();
+      // 3) Show visit summary + let user finalise service type / payment / receipt
+      showVisitSummary(serviceId, b, a);
+    };
+
+    /* =========================================================
+       EXTRA FEES LOGIC
+       ========================================================= */
+    window.currentExtraFees = [];
+    window.currentBaseTotal = 0;
+
+    window.addExtraFee = function() {
+      const desc = document.getElementById('ef_desc').value.trim();
+      const amt = Number(document.getElementById('ef_amount').value || 0);
+      if (!desc || amt <= 0) { toast("Enter valid fee description and amount", "error"); return; }
+      window.currentExtraFees.push({desc, amount: amt});
+      renderExtraFeesUI();
+    };
+
+    window.removeExtraFee = function(idx) {
+      window.currentExtraFees.splice(idx, 1);
+      renderExtraFeesUI();
+    };
+
+    window.editExtraFee = function(idx) {
+      const fee = window.currentExtraFees[idx];
+      document.getElementById('ef_desc').value = fee.desc;
+      document.getElementById('ef_amount').value = fee.amount;
+      window.removeExtraFee(idx); // Removes it immediately so they can resave
+    };
+
+    window.renderExtraFeesUI = function() {
+      const container = document.getElementById("extraFeesContainer");
+      if (!container) return;
+      
+      let feesTotal = 0;
+      let html = `<div class="card" style="background:var(--surface-2); border:1px solid var(--border); padding:14px; margin-top:14px;">
+                    <h4 style="margin:0 0 10px 0;">Extra Fees</h4>`;
+                    
+      if (window.currentExtraFees.length > 0) {
+          window.currentExtraFees.forEach((fee, i) => {
+              feesTotal += fee.amount;
+              html += `
+              <div class="flex items-center" style="justify-content:space-between; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid var(--border)">
+                  <span>${esc(fee.desc)}</span>
+                  <div class="flex items-center gap-2">
+                      <span style="font-weight:600">${money(fee.amount)}</span>
+                      <button class="btn btn-ghost btn-sm" style="padding:4px" onclick="editExtraFee(${i})" title="Edit">${I.edit}</button>
+                      <button class="btn btn-ghost btn-sm" style="color:var(--danger);padding:4px" onclick="removeExtraFee(${i})" title="Remove">${I.trash}</button>
+                  </div>
+              </div>`;
+          });
+          html += `<div style="text-align:right; margin-bottom:12px; font-size:13px;" class="muted">Extra Fees Total: <span style="font-weight:700; color:var(--text)">${money(feesTotal)}</span></div>`;
+      } else {
+          html += `<div class="muted" style="margin-bottom:12px; font-size:13px;">No extra fees added.</div>`;
+      }
+      
+      html += `
+          <div class="form-row" style="gap:8px">
+              <div class="field" style="margin-bottom:0"><input id="ef_desc" placeholder="Description (e.g. Travel, Setup)"></div>
+              <div class="field" style="margin-bottom:0; display:flex; gap:8px">
+                  <input type="number" id="ef_amount" placeholder="Amount (₪)" style="flex:1">
+                  <button class="btn btn-secondary" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:0 12px;cursor:pointer;font-weight:600" onclick="addExtraFee()">Add</button>
+              </div>
+          </div>
+      </div>`;
+      container.innerHTML = html;
+
+      // Update Grand Totals dynamically in the UI
+      const grandTotalEl = document.getElementById("grandTotalDisplay");
+      if (grandTotalEl) {
+          grandTotalEl.textContent = money(window.currentBaseTotal + feesTotal);
+      }
+
+      const msPreviewEl = document.getElementById("ms_preview");
+      if (msPreviewEl) {
+          const bTotal = window.currentBaseTotal;
+          if (feesTotal > 0) {
+              msPreviewEl.innerHTML = `Service: ${money(bTotal)} <br>Extra Fees: ${money(feesTotal)} <br><b style="font-size:16px;color:var(--text)">Total Charge: ${money(bTotal + feesTotal)}</b>`;
+          } else {
+              msPreviewEl.innerHTML = `Charge preview: ${money(bTotal)}`;
+          }
+      }
+    };
+
+    function showVisitSummary(serviceId, b, appt){
+      const s = getOne("services", serviceId);
+      window.currentBaseTotal = s.amount;
+      window.currentExtraFees = s.extraFees || [];
+
+      openModal(`
+        <div class="modal-head"><h2>Visit Summary</h2><button class="x-btn" onclick="closeModal()">${xIcon()}</button></div>
+        <div class="modal-body">
+          <div class="grid two-col" style="gap:10px;margin-bottom:16px">
+            <div class="billing-box"><div class="bl">Arrival Time</div><div class="bv" style="font-size:16px">${fmtTime(s.arrivalISO)}</div></div>
+            <div class="billing-box"><div class="bl">Departure Time</div><div class="bv" style="font-size:16px">${fmtTime(s.departureISO)}</div></div>
+            <div class="billing-box"><div class="bl">Actual Time Worked</div><div class="bv" style="font-size:16px">${fmtDuration(s.workedMs)}</div></div>
+            <div class="billing-box"><div class="bl">Rounded Billing Time</div><div class="bv" style="font-size:16px">${s.roundedMinutes} min</div></div>
+            <div class="billing-box"><div class="bl">Billing Blocks × Rate</div><div class="bv" style="font-size:16px">${s.blocks} × ${money(s.perBlock)}</div></div>
+            <div class="billing-box" style="background:var(--success-soft)"><div class="bl">Total Amount</div><div class="bv" style="color:var(--success)" id="grandTotalDisplay">${money(s.amount)}</div></div>
+          </div>
+          <div class="field"><label>Service Type</label>
+            <select id="vs_type">${SERVICE_TYPES.map(t => `<option ${s.serviceType===t?"selected":""}>${t}</option>`).join("")}</select></div>
+          <div class="field"><label>Description</label><textarea id="vs_desc">${esc(s.description||"")}</textarea></div>
+          <div class="field"><label>Payment Method</label>
+            <select id="vs_pay">${PAYMENT_METHODS.map(p => `<option ${s.paymentMethod===p?"selected":""}>${p}</option>`).join("")}</select></div>
+          
+          <div id="extraFeesContainer"></div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="saveServiceFromSummary('${serviceId}',false)">Save Only</button>
+          <button class="btn btn-primary" onclick="saveServiceFromSummary('${serviceId}',true)">${I.receipt}Save & Generate Receipt</button>
+        </div>`, true);
+
+      setTimeout(() => window.renderExtraFeesUI(), 0);
+    }
+
+    window.saveServiceFromSummary = async function(serviceId, makeReceipt){
+      const extraTotal = window.currentExtraFees.reduce((sum, f) => sum + Number(f.amount), 0);
+      const upd = {
+        serviceType: document.getElementById("vs_type").value,
+        description: document.getElementById("vs_desc").value.trim(),
+        paymentMethod: document.getElementById("vs_pay").value,
+        extraFees: window.currentExtraFees,
+        amount: window.currentBaseTotal + extraTotal
+      };
+      await dbUpdate("services", serviceId, upd);
+      closeModal();
+      if (makeReceipt) generateReceipt(serviceId);
+      else { toast("Service saved"); reRenderCurrent(); }
+    };
+
+    /* ---------- SERVICE HISTORY ---------- */
+    RENDERERS.services = function(){
+      const list = [...getAll("services")].sort((a,b)=> new Date(b.dateISO)-new Date(a.dateISO));
+      setView(`
+        ${pageHead("Service History", `${list.length} completed services`,
+          `<button class="btn btn-primary" onclick="manualServiceForm()">${I.plus}Add Service</button>`)}
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Customer</th><th>Service</th><th>Worked</th><th>Billed</th><th>Amount</th><th>Payment</th><th>Actions</th></tr></thead>
+            <tbody>
+            ${list.length ? list.map(s => `
+              <tr>
+                <td>${fmtDate(s.dateISO)}</td>
+                <td style="font-weight:600">${esc(s.customerName)}</td>
+                <td>${esc(s.serviceType)}</td>
+                <td>${fmtDuration(s.workedMs||0)}</td>
+                <td>${s.roundedMinutes||0}m (${s.blocks||0})</td>
+                <td style="font-weight:700">${money(s.amount)}</td>
+                <td>${esc(s.paymentMethod||"—")}</td>
+                <td class="actions">
+                  <button class="btn btn-ghost btn-sm" onclick="generateReceipt('${s.id}')" title="Receipt">${I.receipt}</button>
+                  <button class="btn btn-ghost btn-sm" onclick="deleteService('${s.id}')" title="Delete">${I.trash}</button>
+                </td>
+              </tr>`).join("")
+              : `<tr><td colspan="8">${emptyState(I.wrench,"No services recorded yet")}</td></tr>`}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      `);
+    };
+    window.deleteService = function(id){
+      confirmDialog("Delete this service record?", async () => {
+        await dbDelete("services", id); toast("Service deleted","warn"); reRenderCurrent();
+      });
+    };
+    // Manual service entry (for jobs not run through the live timer)
+    window.manualServiceForm = function(){
+      const customers = getAll("customers");
+      openModal(`
+        <div class="modal-head"><h2>Add Service Record</h2><button class="x-btn" onclick="closeModal()">${xIcon()}</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Customer *</label>
+            <select id="ms_customer"><option value="">— Select —</option>${customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></div>
+          <div class="form-row">
+            <div class="field"><label>Service Type</label><select id="ms_type">${SERVICE_TYPES.map(t=>`<option>${t}</option>`).join("")}</select></div>
+            <div class="field"><label>Minutes Worked</label><input type="number" id="ms_minutes" min="1" value="30"></div>
+          </div>
+          <div class="field"><label>Description</label><textarea id="ms_desc"></textarea></div>
+          <div class="field"><label>Payment Method</label><select id="ms_pay">${PAYMENT_METHODS.map(p=>`<option>${p}</option>`).join("")}</select></div>
+          
+          <div id="extraFeesContainer"></div>
+          <div class="card" style="background:var(--surface-2); padding:12px; margin-top:14px" id="ms_preview">Charge preview: —</div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveManualService()">Save Service</button>
+        </div>`);
+
+      const upd = () => { 
+        const m = Number(document.getElementById("ms_minutes").value||0); 
+        const b = billing(m*60000);
+        window.currentBaseTotal = b.total;
+        window.renderExtraFeesUI(); 
+      };
+      document.getElementById("ms_minutes").addEventListener("input", upd); 
+      
+      window.currentExtraFees = [];
+      window.currentBaseTotal = billing(30*60000).total;
+      setTimeout(() => window.renderExtraFeesUI(), 0);
+    };
+
+    window.saveManualService = async function(){
+      const custId = document.getElementById("ms_customer").value;
+      if (!custId){ toast("Select a customer","error"); return; }
+      const c = getOne("customers", custId);
+      const minutes = Number(document.getElementById("ms_minutes").value||0);
+      if (minutes < 1){ toast("Enter minutes worked","error"); return; }
+      
+      const b = billing(minutes*60000);
+      const extraTotal = window.currentExtraFees.reduce((sum, f) => sum + Number(f.amount), 0);
+      const finalAmount = b.total + extraTotal;
+      const now = new Date();
+      
+      await dbAdd("services", {
+        customerId: custId, customerName: c?.name||"", dateISO: now.toISOString(),
+        serviceType: document.getElementById("ms_type").value,
+        description: document.getElementById("ms_desc").value.trim(),
+        deviceInfo: c?.devices||"",
+        arrivalISO: now.toISOString(), departureISO: new Date(now.getTime()+minutes*60000).toISOString(),
+        workedMs: minutes*60000, roundedMinutes: b.roundedMinutes, blocks: b.blocks,
+        perBlock: b.perBlock, amount: finalAmount, extraFees: window.currentExtraFees,
+        paymentMethod: document.getElementById("ms_pay").value, receiptNo: nextReceiptNo(),
+        notes: document.getElementById("ms_desc").value.trim()
+      });
+      toast("Service added"); closeModal(); reRenderCurrent();
+    };
+
+    /* ---------- RECEIPTS ---------- */
+    function nextReceiptNo(){
+      const existing = getAll("receipts").map(r => Number(String(r.receiptNo||"").replace(/\D/g,"")) || 0);
+      const fromServices = getAll("services").map(s => Number(String(s.receiptNo||"").replace(/\D/g,"")) || 0);
+      const max = Math.max(0, ...existing, ...fromServices);
+      return "R" + String(max + 1).padStart(4, "0");
+    }
+
+    RENDERERS.receipts = function(){
+      const list = [...getAll("receipts")].sort((a,b)=> new Date(b.dateISO)-new Date(a.dateISO));
+      setView(`
+        ${pageHead("Receipts", `${list.length} saved receipts`)}
+        <div class="card" style="padding:0">
+          <div class="table-wrap">
+          <table>
+            <thead><tr><th>Receipt #</th><th>Date</th><th>Customer</th><th>Service</th><th>Amount</th><th>Payment</th><th>Actions</th></tr></thead>
+            <tbody>
+            ${list.length ? list.map(r => `
+              <tr>
+                <td style="font-weight:700">${esc(r.receiptNo)}</td>
+                <td>${fmtDate(r.dateISO)}</td>
+                <td>${esc(r.customerName)}</td>
+                <td>${esc(r.serviceType)}</td>
+                <td style="font-weight:700">${money(r.amount)}</td>
+                <td>${esc(r.paymentMethod||"—")}</td>
+                <td class="actions">
+                  <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${r.id}')" title="View">${I.eye}</button>
+                  <button class="btn btn-ghost btn-sm" onclick="deleteReceipt('${r.id}')" title="Delete">${I.trash}</button>
+                </td>
+              </tr>`).join("")
+              : `<tr><td colspan="7">${emptyState(I.receipt,"No receipts yet — end a visit or add a service to generate one")}</td></tr>`}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      `);
+    };
+    window.deleteReceipt = function(id){
+      confirmDialog("Delete this receipt?", async () => { await dbDelete("receipts", id); toast("Receipt deleted","warn"); reRenderCurrent(); });
+    };
+
+    // Build receipt HTML from a service record, saving a receipt doc if new.
+    window.generateReceipt = async function(serviceId){
+      const s = getOne("services", serviceId); if (!s) return;
+      const cust = getOne("customers", s.customerId) || {};
+      // Persist a receipt document (idempotent by receiptNo)
+      let receipt = getAll("receipts").find(r => r.receiptNo === s.receiptNo);
+      const receiptData = {
+        receiptNo: s.receiptNo, serviceId, dateISO: s.dateISO,
+        customerId: s.customerId, customerName: s.customerName, customerPhone: cust.phone||"",
+        serviceType: s.serviceType, description: s.description,
+        arrivalISO: s.arrivalISO, departureISO: s.departureISO,
+        workedMs: s.workedMs, roundedMinutes: s.roundedMinutes, blocks: s.blocks,
+        perBlock: s.perBlock, amount: s.amount, extraFees: s.extraFees || [], paymentMethod: s.paymentMethod
+      };
+      if (!receipt){ await dbAdd("receipts", receiptData); }
+      showReceiptModal(receiptData);
+    };
+    window.viewReceipt = function(id){ showReceiptModal(getOne("receipts", id)); };
+
+    function receiptHTML(r){
+      let extraFeesHtml = '';
+      if (r.extraFees && r.extraFees.length > 0) {
+        const baseCharge = r.blocks * r.perBlock;
+        const extraTotal = r.extraFees.reduce((sum, f) => sum + Number(f.amount), 0);
+        
+        extraFeesHtml += `
+        <hr style="border:none;border-top:1px dashed #cbd5e1;margin:10px 0">
+        <div class="rc-row"><span class="k">Service Charge</span><span>${money(baseCharge)}</span></div>
+        <div class="rc-row"><span class="k" style="color:#1a2233;font-weight:600">Extra Fees:</span><span></span></div>
+        `;
+        r.extraFees.forEach(f => {
+            extraFeesHtml += `<div class="rc-row"><span class="k" style="padding-left:12px">— ${esc(f.desc)}</span><span>${money(f.amount)}</span></div>`;
+        });
+        extraFeesHtml += `<div class="rc-row"><span class="k" style="padding-left:12px;font-weight:600">Extra Fees Total</span><span style="font-weight:600">${money(extraTotal)}</span></div>`;
+      }
+
+      return `
+        <div class="receipt" id="receiptDoc">
+          <div class="rc-head">
+            <img src="${esc(settings.logoUrl)}" alt="logo" crossorigin="anonymous"/>
+            <h2>${esc(settings.businessName)}</h2>
+            <small>${esc(settings.businessPhone||"")} ${settings.businessEmail?("• "+esc(settings.businessEmail)):""}</small><br>
+            <small>${esc(settings.businessAddress||"")}</small>
+          </div>
+          <div class="rc-row"><span class="k">Receipt #</span><span><b>${esc(r.receiptNo)}</b></span></div>
+          <div class="rc-row"><span class="k">Date</span><span>${fmtDateTime(r.dateISO)}</span></div>
+          <div class="rc-row"><span class="k">Customer</span><span>${esc(r.customerName)}</span></div>
+          <div class="rc-row"><span class="k">Phone</span><span>${esc(r.customerPhone||"—")}</span></div>
+          <hr style="border:none;border-top:1px dashed #cbd5e1;margin:10px 0">
+          <div class="rc-row"><span class="k">Service</span><span>${esc(r.serviceType)}</span></div>
+          ${r.description?`<div class="rc-row"><span class="k">Description</span><span style="max-width:60%;text-align:right">${esc(r.description)}</span></div>`:""}
+          <div class="rc-row"><span class="k">Arrival</span><span>${fmtTime(r.arrivalISO)}</span></div>
+          <div class="rc-row"><span class="k">Departure</span><span>${fmtTime(r.departureISO)}</span></div>
+          <div class="rc-row"><span class="k">Actual Work Time</span><span>${fmtDuration(r.workedMs||0)}</span></div>
+          <div class="rc-row"><span class="k">Rounded Billing Time</span><span>${r.roundedMinutes} min</span></div>
+          <div class="rc-row"><span class="k">Billing Blocks</span><span>${r.blocks} × ${money(r.perBlock)}</span></div>
+          ${extraFeesHtml}
+          <div class="rc-row"><span class="k">Payment Method</span><span>${esc(r.paymentMethod||"—")}</span></div>
+          <div class="rc-total"><span>${(r.extraFees && r.extraFees.length > 0) ? 'TOTAL PAID' : 'TOTAL'}</span><span>${money(r.amount)}</span></div>
+          <div class="rc-foot">${esc(settings.receiptFooter||"")}</div>
+        </div>`;
+    }
+    function showReceiptModal(r){
+      openModal(`
+        <div class="modal-head"><h2>Receipt ${esc(r.receiptNo)}</h2><button class="x-btn" onclick="closeModal()">${xIcon()}</button></div>
+        <div class="modal-body" style="background:var(--surface-2)">${receiptHTML(r)}</div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+          <button class="btn btn-ghost" onclick="printReceipt()">${I.print}Print</button>
+          <button class="btn btn-primary" onclick="exportReceiptPDF('${esc(r.receiptNo)}')">${I.download}Export PDF</button>
+        </div>`, true);
+    }
+    window.printReceipt = function(){
+      const node = document.getElementById("receiptDoc"); if (!node) return;
+      const area = document.getElementById("printArea");
+      area.innerHTML = node.outerHTML; area.classList.remove("hidden");
+      window.print();
+      setTimeout(()=> area.classList.add("hidden"), 500);
+    };
+    window.exportReceiptPDF = function(receiptNo){
+      const node = document.getElementById("receiptDoc"); if (!node) return;
+      const clone = node.cloneNode(true);
+      html2pdf().set({
+        margin: 10, filename: `Receipt-${receiptNo}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a5", orientation: "portrait" }
+      }).from(clone).save();
+      toast("Generating PDF…");
+    };
+
+    /* ---------- REPORTS ---------- */
+    RENDERERS.reports = function(){
+      const services = getAll("services");
+      const avgMs = services.length ? services.reduce((s,x)=>s+Number(x.workedMs||0),0)/services.length : 0;
+      // most common service type
+      const counts = {};
+      services.forEach(s => counts[s.serviceType] = (counts[s.serviceType]||0)+1);
+      const common = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+      setView(`
+        ${pageHead("Reports", "Business performance overview")}
+        <div class="grid stat-grid">
+          ${statCard(I.money,"green","Income Today",money(incomeSince(startOfToday())))}
+          ${statCard(I.money,"blue","Income This Week",money(incomeSince(startOfWeek())))}
+          ${statCard(I.money,"amber","Income This Month",money(incomeSince(startOfMonth())))}
+          ${statCard(I.check,"green","Jobs Completed",services.length)}
+        </div>
+        <div class="grid three-col" style="margin-top:18px">
+          ${statCard(I.clock,"blue","Average Visit Length", avgMs?fmtDuration(avgMs):"—")}
+          ${statCard(I.wrench,"amber","Most Common Service", common?`${esc(common[0])}`:"—")}
+          ${statCard(I.users,"green","Total Customers", getAll("customers").length)}
+        </div>
+        <div class="card" style="margin-top:22px">
+          <h3>Income Breakdown by Service Type</h3>
+          ${Object.keys(counts).length ? Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([type,cnt]) => {
+            const amt = services.filter(s=>s.serviceType===type).reduce((s,x)=>s+Number(x.amount||0),0);
+            const maxAmt = Math.max(...Object.keys(counts).map(t => services.filter(s=>s.serviceType===t).reduce((s,x)=>s+Number(x.amount||0),0)));
+            return `<div style="margin-bottom:12px">
+              <div class="flex" style="justify-content:space-between;margin-bottom:4px"><span>${esc(type)} <small class="muted">(${cnt})</small></span><b>${money(amt)}</b></div>
+              <div class="progress-track"><div class="progress-fill" style="width:${maxAmt?Math.round(amt/maxAmt*100):0}%"></div></div>
+            </div>`;
+          }).join("") : emptyState(I.chart,"No data yet")}
+        </div>
+      `);
+    };
+
+    /* ---------- SETTINGS ---------- */
+    RENDERERS.settings = function(){
+      setView(`
+        ${pageHead("Settings", "Business configuration & billing")}
+        <div class="grid two-col">
+          <div class="card">
+            <h3>Business Details</h3>
+            <div class="field"><label>Business Name</label><input id="s_name" value="${esc(settings.businessName)}"></div>
+            <div class="field"><label>Business Phone</label><input id="s_phone" value="${esc(settings.businessPhone)}"></div>
+            <div class="field"><label>Business Email</label><input id="s_email" value="${esc(settings.businessEmail)}"></div>
+            <div class="field"><label>Business Address</label><input id="s_address" value="${esc(settings.businessAddress)}"></div>
+            <div class="field"><label>Logo URL</label><input id="s_logo" value="${esc(settings.logoUrl)}"></div>
+            <div class="field"><label>Receipt Footer</label><textarea id="s_footer">${esc(settings.receiptFooter)}</textarea></div>
+          </div>
+          <div class="card">
+            <h3>Billing & Pricing</h3>
+            <div class="field"><label>Currency Symbol</label><input id="s_currency" value="${esc(settings.currency)}"></div>
+            <div class="field"><label>Price Per 30 Minutes</label><input type="number" id="s_price30" value="${esc(settings.pricePer30)}"></div>
+            <div class="field"><label>Billing Block Length (minutes)</label><input type="number" id="s_block" value="${esc(settings.blockLength)}"></div>
+            <div class="field"><label>Price Per Billing Block</label><input type="number" id="s_perblock" value="${esc(settings.pricePerBlock)}"></div>
+            <div class="card" style="background:var(--surface-2)">
+              <small class="muted">Formula</small>
+              <div style="font-size:13px;margin-top:4px">Billable Blocks = ceiling(Worked Minutes ÷ Block Length)<br>Total Charge = Billable Blocks × Price Per Block</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:18px">
+          <button class="btn btn-primary" onclick="saveConfig()">Save Settings</button>
+        </div>
+      `);
+    };
+
+    window.saveConfig = async function(){
+      const upd = {
+        businessName: document.getElementById("s_name").value.trim(),
+        businessPhone: document.getElementById("s_phone").value.trim(),
+        businessEmail: document.getElementById("s_email").value.trim(),
+        businessAddress: document.getElementById("s_address").value.trim(),
+        logoUrl: document.getElementById("s_logo").value.trim(),
+        receiptFooter: document.getElementById("s_footer").value.trim(),
+        currency: document.getElementById("s_currency").value.trim() || "₪",
+        pricePer30: Number(document.getElementById("s_price30").value),
+        blockLength: Number(document.getElementById("s_block").value),
+        pricePerBlock: Number(document.getElementById("s_perblock").value)
+      };
+      await saveSettings(upd);
+      toast("Settings saved successfully");
+      renderNav(); // Re-render to update brand name
+      reRenderCurrent();
+    };
+
+    /* ---------- BACKUP ---------- */
+    RENDERERS.backup = function(){
+      setView(`
+        ${pageHead("Data Backup", "Export or import your CRM data")}
+        <div class="grid two-col">
+          <div class="card">
+            <h3>Export Data</h3>
+            <p class="muted" style="font-size:13px">Download a full JSON backup of all your customers, appointments, services, and receipts.</p>
+            <button class="btn btn-primary" onclick="exportData()">${I.download}Download Backup</button>
+          </div>
+          <div class="card">
+            <h3>Import Data</h3>
+            <p class="muted" style="font-size:13px">Restore CRM data from a previously downloaded JSON backup file. This will merge with existing records.</p>
+            <input type="file" id="importFile" accept=".json" style="margin-bottom:12px;font-size:13px">
+            <button class="btn btn-danger" onclick="importData()">${I.backup}Import Data</button>
+          </div>
+        </div>
+      `);
+    };
+
+    window.exportData = function(){
+      const data = { customers: cache.customers, appointments: cache.appointments, services: cache.services, receipts: cache.receipts, settings };
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "mmcrm-backup-" + new Date().toISOString().slice(0,10) + ".json";
+      a.click(); URL.revokeObjectURL(url);
+    };
+
+    window.importData = function(){
+      const file = document.getElementById("importFile").files[0];
+      if (!file) { toast("Select a file first", "error"); return; }
+      const reader = new FileReader();
+      reader.onload = async e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.customers) data.customers.forEach(async c => await setDoc(doc(fdb, "customers", c.id), c));
+          if (!fdb) {
+             if (data.customers) localStorage.setItem(LS_KEY("customers"), JSON.stringify(data.customers));
+             if (data.appointments) localStorage.setItem(LS_KEY("appointments"), JSON.stringify(data.appointments));
+             if (data.services) localStorage.setItem(LS_KEY("services"), JSON.stringify(data.services));
+             if (data.receipts) localStorage.setItem(LS_KEY("receipts"), JSON.stringify(data.receipts));
+             if (data.settings) localStorage.setItem(LS_KEY("settings"), JSON.stringify(data.settings));
+             location.reload();
+          }
+        } catch(err) {
+          toast("Invalid backup file", "error");
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    /* ---------- GLOBAL SEARCH ---------- */
+    window.doGlobalSearch = function(q){
+      q = q.trim().toLowerCase();
+      const res = document.getElementById("searchResults");
+      if(!q) { res.style.display = "none"; return; }
+      let html = "";
+      const cust = getAll("customers").filter(c => (c.name||"").toLowerCase().includes(q) || (c.phone||"").includes(q));
+      cust.slice(0,3).forEach(c => html += `<div class="sr-item" onclick="viewCustomer('${c.id}');document.getElementById('globalSearch').value='';this.parentElement.style.display='none'">Customer: <b>${esc(c.name)}</b> <small>${esc(c.phone||"")}</small></div>`);
+      
+      const rcpt = getAll("receipts").filter(r => (r.receiptNo||"").toLowerCase().includes(q));
+      rcpt.slice(0,3).forEach(r => html += `<div class="sr-item" onclick="viewReceipt('${r.id}');document.getElementById('globalSearch').value='';this.parentElement.style.display='none'">Receipt: <b>${esc(r.receiptNo)}</b> <small>${esc(r.customerName)}</small></div>`);
+      
+      if(html){ res.innerHTML = html; res.style.display = "block"; } else { res.style.display = "none"; }
+    };
+    document.addEventListener("click", e => { if(!e.target.closest(".search-wrap")) document.getElementById("searchResults").style.display="none"; });
+
+    /* ---------- AUTH / INIT ---------- */
+    async function boot(){
+      applyTheme(localStorage.getItem("mmcrm_theme") || "light");
+      await initData();
+      
+      if (auth) {
+         onAuthStateChanged(auth, user => {
+            if (user) {
+               document.getElementById("loginScreen").style.display = "none";
+               renderNav(); navigate("dashboard");
+            } else {
+               document.getElementById("loginScreen").style.display = "flex";
+            }
+         });
+         document.getElementById("loginBtn").onclick = () => {
+            const e = document.getElementById("loginEmail").value;
+            const p = document.getElementById("loginPassword").value;
+            signInWithEmailAndPassword(auth, e, p).catch(err => toast(err.message, "error"));
+         };
+      } else {
+         document.getElementById("loginScreen").style.display = "none";
+         renderNav(); navigate("dashboard");
+      }
+    }
+    boot();
+  </script>
+</body>
+</html>
